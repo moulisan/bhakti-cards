@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Bhakti Cards</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,300;1,400&family=Noto+Sans+Devanagari:wght@300;400&family=Noto+Sans+Tamil:wght@300;400&display=swap" rel="stylesheet">
+
+  <style>
+    *, *::before, *::after {
+      margin: 0; padding: 0; box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+    html, body { height: 100%; overflow: hidden; }
+
+    body {
+      background: #07050300;
+      background-color: #070503;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      touch-action: manipulation;
+    }
+
+    /* ── Ambient colour glow ── */
+    .glow {
+      position: fixed;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -54%);
+      width: 360px; height: 480px;
+      border-radius: 50%;
+      background: var(--glow, rgba(160, 100, 40, 0.20));
+      filter: blur(90px);
+      transition: background 1.6s ease;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* ── 3-D scene ── */
+    .scene {
+      position: relative;
+      z-index: 1;
+      width: min(340px, 88vw);
+      perspective: 900px;
+      perspective-origin: 50% 42%;
+    }
+
+    /* ── Card ── */
+    .card {
+      width: 100%;
+      aspect-ratio: 3 / 5;
+      border-radius: 26px;
+      position: relative;
+      overflow: hidden;
+      cursor: pointer;
+      will-change: transform;
+      box-shadow:
+        0 2px 4px   rgba(0,0,0,0.45),
+        0 8px 22px  rgba(0,0,0,0.55),
+        0 28px 64px rgba(0,0,0,0.50),
+        0 52px 80px rgba(0,0,0,0.22);
+    }
+
+    /* Layer 0 — gradient shown while photo loads */
+    .card-bg {
+      position: absolute; inset: 0;
+      background: var(--card-gradient);
+      z-index: 0;
+    }
+
+    /* Layer 1 — deity photo */
+    .card-photo {
+      position: absolute; inset: 0;
+      z-index: 1;
+    }
+    .card-photo img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      object-position: var(--img-pos, center 12%);
+      opacity: 0;
+      transition: opacity 1.2s ease;
+    }
+    .card-photo img.ready { opacity: 1; }
+
+    /* Layer 2 — scrim: clear at top, dark at bottom */
+    .card-scrim {
+      position: absolute; inset: 0; z-index: 2;
+      background: linear-gradient(
+        to bottom,
+        rgba(0,0,0,0.00)  0%,
+        rgba(0,0,0,0.00) 22%,
+        rgba(0,0,0,0.22) 48%,
+        rgba(0,0,0,0.78) 72%,
+        rgba(0,0,0,0.93) 100%
+      );
+    }
+
+    /* Layer 3 — text content */
+    .card-content {
+      position: absolute; inset: 0; z-index: 3;
+      display: flex; flex-direction: column;
+      padding: 0 30px 34px;
+      justify-content: flex-end;
+    }
+
+    /* Thin gold separator */
+    .divider {
+      display: flex; align-items: center; gap: 9px;
+      margin-bottom: 20px;
+    }
+    .divider-line {
+      flex: 1; height: 1px;
+      background: linear-gradient(to right, transparent, rgba(201,168,76,0.55), transparent);
+    }
+    .divider-dot {
+      width: 3.5px; height: 3.5px; border-radius: 50%;
+      background: rgba(201,168,76,0.80);
+    }
+    .divider-dot.sm { width: 2.5px; height: 2.5px; opacity: 0.50; }
+
+    /* Sanskrit / Tamil phrase — the centrepiece */
+    .phrase-script {
+      font-family: var(--card-font, 'Noto Sans Devanagari'), sans-serif;
+      font-size: 21px;
+      font-weight: 300;
+      color: rgba(255,255,255,0.97);
+      line-height: 1.75;
+      text-align: center;
+      letter-spacing: 0.01em;
+      text-shadow: 0 1px 14px rgba(0,0,0,0.55);
+    }
+
+    /* Transliteration */
+    .phrase-roman {
+      margin-top: 12px;
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-size: 15px;
+      font-weight: 300;
+      font-style: italic;
+      color: rgba(255,255,255,0.42);
+      text-align: center;
+      letter-spacing: 0.07em;
+      line-height: 1.6;
+    }
+
+    /* Layer 4 — gold border */
+    .card-border {
+      position: absolute; inset: 0;
+      border-radius: 26px;
+      border: 1px solid rgba(201,168,76,0.18);
+      z-index: 4;
+      pointer-events: none;
+    }
+
+    /* ── Progress dots ── */
+    .dots {
+      display: flex; justify-content: center; align-items: center;
+      gap: 7px; margin-top: 22px;
+      position: relative; z-index: 1;
+    }
+    .dot {
+      width: 4px; height: 4px; border-radius: 2px;
+      background: rgba(255,255,255,0.16);
+      transition: width 0.38s cubic-bezier(0.34,1.3,0.64,1), background 0.38s ease;
+    }
+    .dot.active { width: 18px; background: rgba(201,168,76,0.80); }
+
+    /* ── Tap hint ── */
+    .hint {
+      margin-top: 13px;
+      font-size: 9px; letter-spacing: 0.30em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.10);
+      font-family: -apple-system, sans-serif;
+      position: relative; z-index: 1;
+    }
+
+    /* ─────────────────────────────
+       Flip animations
+    ───────────────────────────── */
+    @keyframes flipOut {
+      0%   { transform: rotateY(0deg)   scale(1)    translateY(0);    }
+      18%  { transform: rotateY(-11deg) scale(1.02) translateY(-5px); }
+      100% { transform: rotateY(-90deg) scale(0.94) translateY(-3px); }
+    }
+    @keyframes flipIn {
+      0%   { transform: rotateY(90deg)  scale(0.94); }
+      55%  { transform: rotateY(-6deg)  scale(1.01); }
+      75%  { transform: rotateY(2.5deg) scale(1.005); }
+      100% { transform: rotateY(0deg)   scale(1); }
+    }
+    .is-flipping-out { animation: flipOut 0.32s cubic-bezier(0.60, 0, 1, 0.50) forwards; }
+    .is-flipping-in  { animation: flipIn  0.46s cubic-bezier(0.16, 1.1, 0.30, 1) forwards; }
+  </style>
+</head>
+<body>
+
+<div class="glow" id="glow"></div>
+
+<div class="scene">
+  <div class="card" id="card"></div>
+</div>
+
+<div class="dots" id="dots"></div>
+<div class="hint">tap to continue</div>
+
+<script>
+  // ── Card data ─────────────────────────────────────────────────
+  // Drop images into the /images/ folder and update the paths below.
+  const CARDS = [
+    {
+      script:   'ॐ गं गणपतये नमः',
+      roman:    'Om Gam Ganapataye Namaha',
+      image:    'images/ganesha.png',
+      imgPos:   'center 10%',
+      // pencil-sketch on near-white — fallback stays dark so scrim reads well
+      gradient: 'linear-gradient(170deg, #2C2C2A 0%, #141412 50%, #080807 100%)',
+      glow:     'rgba(130, 120, 100, 0.22)',
+      font:     'Noto Sans Devanagari',
+    },
+    {
+      script:   'ॐ नमः शिवाय',
+      roman:    'Om Namah Shivaya',
+      image:    'images/shiva.png',
+      imgPos:   'center 8%',
+      // deep indigo-blue with warm amber halo
+      gradient: 'linear-gradient(170deg, #1A1850 0%, #0C0A2E 50%, #060418 100%)',
+      glow:     'rgba(80, 70, 200, 0.35)',
+      font:     'Noto Sans Devanagari',
+    },
+    {
+      script:   'ஓம் சரவணபவ',
+      roman:    'Om Saravanabhava',
+      image:    'images/murugan.png',
+      imgPos:   'center 12%',
+      // warm golden-amber to match the illustration background
+      gradient: 'linear-gradient(170deg, #6A4400 0%, #3A2200 50%, #160D00 100%)',
+      glow:     'rgba(180, 130, 20, 0.32)',
+      font:     'Noto Sans Tamil',
+    },
+    {
+      script:   'जय हनुमान ज्ञान गुण सागर',
+      roman:    'Jai Hanuman Gyan Gun Sagar',
+      image:    'images/hanuman.png',
+      imgPos:   'center 5%',
+      // terracotta-orange matching the RAM watermark background
+      gradient: 'linear-gradient(170deg, #6E2800 0%, #3C1200 50%, #180700 100%)',
+      glow:     'rgba(180, 80, 20, 0.30)',
+      font:     'Noto Sans Devanagari',
+    },
+  ];
+
+  // ── State ─────────────────────────────────────────────────────
+  let current = 0;
+  let busy    = false;
+
+  const cardEl = document.getElementById('card');
+  const glowEl = document.getElementById('glow');
+  const dotsEl = document.getElementById('dots');
+
+  // ── Render ────────────────────────────────────────────────────
+  function renderCard(card) {
+    cardEl.style.setProperty('--card-gradient', card.gradient);
+    cardEl.style.setProperty('--card-font',     `'${card.font}'`);
+    cardEl.style.setProperty('--img-pos',       card.imgPos || 'center 12%');
+    glowEl.style.setProperty('--glow',          card.glow);
+
+    const scriptHtml = card.script.replace(/\n/g, '<br>');
+    const romanHtml  = card.roman.replace(/\n/g,  '<br>');
+
+    cardEl.innerHTML = `
+      <div class="card-bg"></div>
+      <div class="card-photo">
+        <img id="deity-img" alt="" src="${card.image}">
+      </div>
+      <div class="card-scrim"></div>
+      <div class="card-content">
+        <div class="divider">
+          <div class="divider-line"></div>
+          <div class="divider-dot"></div>
+          <div class="divider-dot sm"></div>
+          <div class="divider-dot"></div>
+          <div class="divider-line"></div>
+        </div>
+        <div class="phrase-script">${scriptHtml}</div>
+        <div class="phrase-roman">${romanHtml}</div>
+      </div>
+      <div class="card-border"></div>
+    `;
+
+    // Fade image in once loaded
+    const img = cardEl.querySelector('#deity-img');
+    if (img.complete && img.naturalWidth) {
+      img.classList.add('ready');
+    } else {
+      img.addEventListener('load', () => img.classList.add('ready'), { once: true });
+    }
+
+    // Dots
+    dotsEl.innerHTML = CARDS.map((_, i) =>
+      `<div class="dot ${i === current ? 'active' : ''}"></div>`
+    ).join('');
+  }
+
+  // ── Flip ──────────────────────────────────────────────────────
+  function flip() {
+    if (busy) return;
+    busy = true;
+    if (navigator.vibrate) navigator.vibrate(6);
+
+    cardEl.classList.add('is-flipping-out');
+
+    setTimeout(() => {
+      cardEl.classList.remove('is-flipping-out');
+      current = (current + 1) % CARDS.length;
+      renderCard(CARDS[current]);
+      void cardEl.offsetWidth;
+      cardEl.classList.add('is-flipping-in');
+
+      setTimeout(() => {
+        cardEl.classList.remove('is-flipping-in');
+        busy = false;
+      }, 460);
+    }, 320);
+  }
+
+  // ── Input ─────────────────────────────────────────────────────
+  cardEl.addEventListener('click', flip);
+
+  let touchX = 0;
+  cardEl.addEventListener('touchstart', e => { touchX = e.touches[0].clientX; }, { passive: true });
+  cardEl.addEventListener('touchend',   e => {
+    if (Math.abs(touchX - e.changedTouches[0].clientX) > 36) flip();
+  }, { passive: true });
+
+  // ── Boot ──────────────────────────────────────────────────────
+  renderCard(CARDS[0]);
+</script>
+</body>
+</html>
