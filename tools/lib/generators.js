@@ -89,7 +89,7 @@ async function searchUnsplash(query, count, key) {
 
 async function searchWikimedia(query, count) {
   try {
-    const searchUrl = `https://commons.wikimedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&srnamespace=6&srlimit=${count*3}&format=json&origin=*`;
+    const searchUrl = `https://commons.wikimedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&srnamespace=6&srlimit=${count*5}&format=json&origin=*`;
     const data = await (await fetch(searchUrl)).json();
     const titles = (data.query?.search || []).map(r => r.title);
     const images = [];

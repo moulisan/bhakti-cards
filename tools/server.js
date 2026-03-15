@@ -64,6 +64,15 @@ app.post('/api/cards/:id/reject', (req, res) => {
   card.status = 'rejected'; saveCards(cards); res.json(card);
 });
 
+app.delete('/api/cards', (req, res) => {
+  const { status } = req.query;
+  let cards = load();
+  if (status) cards = cards.filter(c => c.status !== status);
+  else cards = [];
+  save(cards);
+  res.json({ ok: true, remaining: cards.length });
+});
+
 app.post('/api/cards/:id/update', (req, res) => {
   const cards = loadCards(), card = cards.find(c => c.id === req.params.id);
   if (!card) return res.status(404).json({ error: 'Not found' });
