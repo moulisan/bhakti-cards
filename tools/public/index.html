@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bhakti Cards — Content Studio</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;1,300;1,400&family=Noto+Sans+Devanagari:wght@300;400&family=Noto+Sans+Tamil:wght@300;400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg:      #0E0E0E;
+      --surface: #1A1A1A;
+      --border:  rgba(255,255,255,0.08);
+      --text:    rgba(255,255,255,0.88);
+      --muted:   rgba(255,255,255,0.40);
+      --gold:    #C9A84C;
+      --approve: #3DA35D;
+      --reject:  #C0392B;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+    }
+
+    /* ── Top bar ── */
+    .topbar {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(14,14,14,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 28px;
+      display: flex; align-items: center; gap: 24px;
+    }
+    .topbar-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 22px; font-weight: 600;
+      color: var(--gold);
+      white-space: nowrap;
+    }
+    .topbar-title span { color: var(--muted); font-size: 14px; font-family: Inter; font-weight: 400; }
+
+    .filters {
+      display: flex; gap: 6px; flex-wrap: wrap;
+    }
+    .filter-btn {
+      padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border);
+      background: none; color: var(--muted); font-size: 13px; cursor: pointer;
+      transition: all 0.2s;
+    }
+    .filter-btn:hover   { border-color: rgba(255,255,255,0.22); color: var(--text); }
+    .filter-btn.active  { background: var(--gold); color: #000; border-color: var(--gold); font-weight: 600; }
+    .filter-btn .count  { opacity: 0.7; font-size: 11px; }
+
+    .export-btn {
+      margin-left: auto;
+      padding: 7px 16px; border-radius: 6px; border: 1px solid rgba(61,163,93,0.5);
+      background: rgba(61,163,93,0.12); color: #3DA35D; font-size: 13px; cursor: pointer;
+      font-weight: 500; transition: all 0.2s; white-space: nowrap;
+    }
+    .export-btn:hover { background: rgba(61,163,93,0.22); }
+
+    /* ── Grid ── */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 20px;
+      padding: 28px;
+    }
+
+    .card-wrap {
+      display: flex; flex-direction: column; gap: 10px;
+    }
+
+    /* ── Card preview — matches app exactly ── */
+    .card-preview {
+      width: 100%;
+      aspect-ratio: 3 / 5;
+      border-radius: 20px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.6);
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .card-preview:hover { transform: translateY(-3px); box-shadow: 0 8px 32px rgba(0,0,0,0.7); }
+    .card-preview.approved { box-shadow: 0 4px 24px rgba(61,163,93,0.35); }
+    .card-preview.rejected { opacity: 0.45; }
+
+    .card-bg   { position: absolute; inset: 0; z-index: 0; }
+    .card-img  { position: absolute; inset: 0; z-index: 1; }
+    .card-img img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      object-position: var(--img-pos, center 10%);
+    }
+    .card-scrim {
+      position: absolute; inset: 0; z-index: 2;
+      background: linear-gradient(to bottom,
+        rgba(0,0,0,0)   0%,
+        rgba(0,0,0,0)  22%,
+        rgba(0,0,0,.22) 48%,
+        rgba(0,0,0,.78) 72%,
+        rgba(0,0,0,.93) 100%
+      );
+    }
+
+    /* Om watermark for gita/upanishad cards */
+    .card-om {
+      position: absolute; inset: 0; z-index: 1;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .card-om-glyph {
+      font-family: 'Noto Sans Devanagari', sans-serif;
+      font-size: 100px; font-weight: 300;
+      color: rgba(255,255,255,0.06);
+      line-height: 1;
+      user-select: none;
+    }
+
+    .card-content {
+      position: absolute; inset: 0; z-index: 3;
+      display: flex; flex-direction: column;
+      padding: 0 18px 20px;
+      justify-content: flex-end;
+    }
+    .card-divider {
+      display: flex; align-items: center; gap: 5px;
+      margin-bottom: 10px;
+    }
+    .divider-line { flex: 1; height: 1px; background: linear-gradient(to right, transparent, rgba(201,168,76,0.55), transparent); }
+    .divider-dot  { width: 3px; height: 3px; border-radius: 50%; background: rgba(201,168,76,0.80); }
+    .divider-dot.sm { width: 2px; height: 2px; opacity: 0.5; }
+
+    .card-script {
+      font-size: 13px; font-weight: 300; line-height: 1.7;
+      color: rgba(255,255,255,0.97); text-align: center;
+    }
+    .card-roman {
+      margin-top: 6px;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 11px; font-style: italic;
+      color: rgba(255,255,255,0.55); text-align: center;
+      line-height: 1.5;
+    }
+    .card-reference {
+      margin-top: 6px;
+      font-size: 9px; letter-spacing: 0.08em;
+      color: rgba(201,168,76,0.70); text-align: center;
+      text-transform: uppercase;
+    }
+    .card-credit {
+      margin-top: 5px;
+      font-size: 8px; color: rgba(255,255,255,0.25); text-align: center;
+    }
+    .card-border {
+      position: absolute; inset: 0; border-radius: 20px;
+      border: 1px solid rgba(201,168,76,0.18);
+      z-index: 6; pointer-events: none;
+    }
+
+    /* status badge */
+    .card-status-badge {
+      position: absolute; top: 8px; right: 8px; z-index: 7;
+      padding: 2px 7px; border-radius: 10px; font-size: 9px; font-weight: 600;
+      letter-spacing: 0.06em; text-transform: uppercase;
+    }
+    .badge-approved { background: rgba(61,163,93,0.85); color: #fff; }
+    .badge-rejected { background: rgba(192,57,43,0.85); color: #fff; }
+
+    /* type badge */
+    .card-type-badge {
+      position: absolute; top: 8px; left: 8px; z-index: 7;
+      padding: 2px 7px; border-radius: 10px; font-size: 9px;
+      letter-spacing: 0.06em; text-transform: uppercase;
+      background: rgba(0,0,0,0.45); color: rgba(255,255,255,0.6);
+    }
+
+    /* ── Action buttons under card ── */
+    .card-actions {
+      display: flex; gap: 8px;
+    }
+    .btn-approve, .btn-reject {
+      flex: 1; padding: 8px 4px; border-radius: 8px; border: none;
+      font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s;
+      letter-spacing: 0.03em;
+    }
+    .btn-approve {
+      background: rgba(61,163,93,0.15); color: #3DA35D;
+      border: 1px solid rgba(61,163,93,0.3);
+    }
+    .btn-approve:hover  { background: rgba(61,163,93,0.28); }
+    .btn-approve.active { background: #3DA35D; color: #fff; border-color: #3DA35D; }
+    .btn-reject {
+      background: rgba(192,57,43,0.12); color: #C0392B;
+      border: 1px solid rgba(192,57,43,0.25);
+    }
+    .btn-reject:hover  { background: rgba(192,57,43,0.24); }
+    .btn-reject.active { background: #C0392B; color: #fff; border-color: #C0392B; }
+
+    /* ── Image edit popover ── */
+    .img-edit {
+      display: flex; gap: 4px; align-items: center;
+    }
+    .img-edit input {
+      flex: 1; padding: 5px 8px; border-radius: 6px;
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); font-size: 11px; outline: none;
+    }
+    .img-edit input:focus { border-color: var(--gold); }
+    .img-edit button {
+      padding: 5px 8px; border-radius: 6px; border: 1px solid var(--border);
+      background: var(--surface); color: var(--muted); font-size: 11px; cursor: pointer;
+    }
+    .img-edit button:hover { color: var(--gold); }
+
+    /* ── Empty state ── */
+    .empty {
+      grid-column: 1 / -1;
+      text-align: center; padding: 80px 20px;
+      color: var(--muted); font-size: 14px; line-height: 2;
+    }
+    .empty strong { display: block; font-size: 18px; color: var(--text); margin-bottom: 8px; }
+
+    /* ── Export panel ── */
+    .export-panel {
+      display: none;
+      position: fixed; inset: 0; z-index: 200;
+      background: rgba(0,0,0,0.85); align-items: center; justify-content: center;
+    }
+    .export-panel.open { display: flex; }
+    .export-box {
+      background: #1A1A1A; border: 1px solid var(--border); border-radius: 12px;
+      padding: 24px; width: min(700px, 90vw); max-height: 80vh;
+      display: flex; flex-direction: column; gap: 14px;
+    }
+    .export-box h3 { font-size: 15px; color: var(--gold); }
+    .export-box textarea {
+      flex: 1; min-height: 300px; background: #111; border: 1px solid var(--border);
+      color: rgba(255,255,255,0.8); font-family: monospace; font-size: 11px;
+      border-radius: 8px; padding: 12px; resize: none; outline: none;
+    }
+    .export-close {
+      align-self: flex-end; padding: 8px 18px; border-radius: 6px;
+      border: 1px solid var(--border); background: none; color: var(--muted);
+      cursor: pointer; font-size: 13px;
+    }
+    .export-close:hover { color: var(--text); }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-title">Bhakti Cards <span>Content Studio</span></div>
+  <div class="filters" id="filters">
+    <button class="filter-btn active" data-status="all">All <span class="count" id="count-all"></span></button>
+    <button class="filter-btn" data-status="pending">Pending <span class="count" id="count-pending"></span></button>
+    <button class="filter-btn" data-status="approved">Approved <span class="count" id="count-approved"></span></button>
+    <button class="filter-btn" data-status="rejected">Rejected <span class="count" id="count-rejected"></span></button>
+  </div>
+  <button class="export-btn" onclick="openExport()">Export approved →</button>
+</div>
+
+<div class="grid" id="grid"></div>
+
+<div class="export-panel" id="export-panel">
+  <div class="export-box">
+    <h3>Approved cards — copy and paste into CARDS array in index.html</h3>
+    <textarea id="export-text" readonly></textarea>
+    <button class="export-close" onclick="closeExport()">Close</button>
+  </div>
+</div>
+
+<script>
+let allCards = [];
+let currentFilter = 'all';
+
+async function loadCards() {
+  const res = await fetch('/api/cards');
+  allCards = await res.json();
+  renderStats();
+  renderGrid();
+}
+
+function renderStats() {
+  const counts = { all: allCards.length, pending: 0, approved: 0, rejected: 0 };
+  allCards.forEach(c => counts[c.status]++);
+  ['all','pending','approved','rejected'].forEach(s => {
+    const el = document.getElementById('count-' + s);
+    if (el) el.textContent = counts[s];
+  });
+}
+
+function filtered() {
+  if (currentFilter === 'all') return allCards;
+  return allCards.filter(c => c.status === currentFilter);
+}
+
+function renderGrid() {
+  const grid  = document.getElementById('grid');
+  const cards = filtered();
+
+  if (cards.length === 0) {
+    grid.innerHTML = `<div class="empty">
+      <strong>No cards here</strong>
+      Run <code>node generate.js --type all --count 3</code> to generate cards.
+    </div>`;
+    return;
+  }
+
+  grid.innerHTML = cards.map(card => buildCardHTML(card)).join('');
+
+  // Attach action listeners
+  cards.forEach(card => {
+    const wrap = document.getElementById('wrap-' + card.id);
+    if (!wrap) return;
+
+    wrap.querySelector('.btn-approve')?.addEventListener('click', () => setStatus(card.id, 'approved'));
+    wrap.querySelector('.btn-reject')?.addEventListener('click',  () => setStatus(card.id, 'rejected'));
+
+    const imgBtn = wrap.querySelector('.img-save-btn');
+    imgBtn?.addEventListener('click', () => {
+      const input = wrap.querySelector('.img-url-input');
+      updateImage(card.id, input.value.trim());
+    });
+  });
+}
+
+function buildCardHTML(card) {
+  const isDeity     = card.type === 'deity';
+  const isGita      = card.type === 'gita';
+  const isUpanishad = card.type === 'upanishad';
+
+  const bgGradient = card.gradient || 'linear-gradient(170deg, #1A1A1A 0%, #050505 100%)';
+  const imgPos     = card.imgPos || 'center 10%';
+
+  const statusBadge = card.status !== 'pending'
+    ? `<div class="card-status-badge badge-${card.status}">${card.status}</div>`
+    : '';
+
+  const typeBadge = `<div class="card-type-badge">${isGita ? 'Gita' : isUpanishad ? 'Upanishad' : card.deity || 'Deity'}</div>`;
+
+  const imageHTML = isDeity && card.image
+    ? `<div class="card-img"><img src="${card.image}" style="--img-pos:${imgPos}" onerror="this.style.display='none'"></div>`
+    : '';
+
+  const omHTML = !isDeity
+    ? `<div class="card-om"><div class="card-om-glyph">ॐ</div></div>`
+    : '';
+
+  const referenceHTML = !isDeity && card.reference
+    ? `<div class="card-reference">${card.reference}</div>`
+    : '';
+
+  const creditHTML = isDeity && card.imageSource
+    ? `<div class="card-credit">${card.imageSource}</div>`
+    : '';
+
+  const approveActive = card.status === 'approved' ? 'active' : '';
+  const rejectActive  = card.status === 'rejected'  ? 'active' : '';
+
+  const fontAttr = `font-family:'${card.font}',sans-serif`;
+
+  const imgEditHTML = isDeity
+    ? `<div class="img-edit">
+        <input class="img-url-input" type="text" placeholder="Image URL..." value="${card.image || ''}">
+        <button class="img-save-btn">Set</button>
+      </div>`
+    : '';
+
+  return `
+    <div class="card-wrap" id="wrap-${card.id}">
+      <div class="card-preview ${card.status}" style="background:${bgGradient}">
+        <div class="card-bg" style="background:${bgGradient}"></div>
+        ${imageHTML}
+        ${omHTML}
+        <div class="card-scrim"></div>
+        <div class="card-content">
+          <div class="card-divider">
+            <div class="divider-line"></div>
+            <div class="divider-dot"></div>
+            <div class="divider-dot sm"></div>
+            <div class="divider-dot"></div>
+            <div class="divider-line"></div>
+          </div>
+          <div class="card-script" style="${fontAttr}">${card.script}</div>
+          <div class="card-roman">${card.roman}</div>
+          ${referenceHTML}
+          ${creditHTML}
+        </div>
+        ${typeBadge}
+        ${statusBadge}
+        <div class="card-border"></div>
+      </div>
+      <div class="card-actions">
+        <button class="btn-approve ${approveActive}" data-id="${card.id}">Approve</button>
+        <button class="btn-reject  ${rejectActive}"  data-id="${card.id}">Reject</button>
+      </div>
+      ${imgEditHTML}
+    </div>`;
+}
+
+async function setStatus(id, status) {
+  await fetch(`/api/cards/${id}/${status}`, { method: 'POST' });
+  const card = allCards.find(c => c.id === id);
+  if (card) card.status = status;
+  renderStats();
+  renderGrid();
+}
+
+async function updateImage(id, url) {
+  const res  = await fetch(`/api/cards/${id}/update`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ image: url }),
+  });
+  const updated = await res.json();
+  const idx = allCards.findIndex(c => c.id === id);
+  if (idx !== -1) allCards[idx] = updated;
+  renderGrid();
+}
+
+// ── Filters ──────────────────────────────────────────────────────────────────
+document.getElementById('filters').addEventListener('click', e => {
+  const btn = e.target.closest('.filter-btn');
+  if (!btn) return;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentFilter = btn.dataset.status;
+  renderGrid();
+});
+
+// ── Export ───────────────────────────────────────────────────────────────────
+async function openExport() {
+  const res  = await fetch('/api/export');
+  const text = await res.text();
+  document.getElementById('export-text').value = text;
+  document.getElementById('export-panel').classList.add('open');
+}
+function closeExport() {
+  document.getElementById('export-panel').classList.remove('open');
+}
+document.getElementById('export-panel').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeExport();
+});
+
+// ── Keyboard shortcuts ───────────────────────────────────────────────────────
+// A = approve, R = reject focused card (future: focus tracking)
+
+loadCards();
+</script>
+</body>
+</html>
