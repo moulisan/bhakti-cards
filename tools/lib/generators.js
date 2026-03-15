@@ -27,7 +27,7 @@ function makeId(prefix) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2,6)}`;
 }
 
-function makeLLM({ anthropicKey, openaiKey, googleKey }) {
+function makeLLM({ anthropicKey, openaiKey, googleKey, groqKey }) {
   if (anthropicKey) {
     const client = new Anthropic({ apiKey: anthropicKey });
     return async (prompt) => {
@@ -48,15 +48,26 @@ function makeLLM({ anthropicKey, openaiKey, googleKey }) {
       return res.choices[0].message.content.trim();
     };
   }
+  if (groqKey) {
+    // Groq is OpenAI-compatible — free tier, no credit card needed
+    const client = new OpenAI({ apiKey: groqKey, baseURL: 'https://api.groq.com/openai/v1' });
+    return async (prompt) => {
+      const res = await client.chat.completions.create({
+        model: 'llama-3.3-70b-versatile', max_tokens: 2048,
+        messages: [{ role: 'user', content: prompt }],
+      });
+      return res.choices[0].message.content.trim();
+    };
+  }
   if (googleKey) {
     const client = new GoogleGenerativeAI(googleKey);
-    const model  = client.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const model  = client.getGenerativeModel({ model: 'gemini-2.0-flash' });
     return async (prompt) => {
       const res = await model.generateContent(prompt);
       return res.response.text().trim();
     };
   }
-  throw new Error('No LLM API key set. Add Anthropic, OpenAI, or Google key in Settings.');
+  throw new Error('No LLM API key set. Add a key in Settings.');
 }
 
 async function llm(call, prompt) {
@@ -99,8 +110,8 @@ async function searchWikimedia(query, count) {
   } catch { return []; }
 }
 
-export async function runGenerate({ type, god, count, anthropicKey, openaiKey, googleKey, unsplashKey, cardsFile, log }) {
-  const call = makeLLM({ anthropicKey, openaiKey, googleKey });
+export async function runGenerate({ type, god, count, anthropicKey, openaiKey, googleKey, groqKey, unsplashKey, cardsFile, log }) {
+  const call = makeLLM({ anthropicKey, openaiKey, googleKey, groqKey });
   const cards     = fs.existsSync(cardsFile) ? JSON.parse(fs.readFileSync(cardsFile)) : [];
   const newCards  = [];
 

@@ -78,16 +78,18 @@ app.get('/api/settings', (req, res) => {
   res.json({
     anthropic_set: !!env.ANTHROPIC_API_KEY,
     openai_set:    !!env.OPENAI_API_KEY,
+    groq_set:      !!env.GROQ_API_KEY,
     google_set:    !!env.GOOGLE_API_KEY,
     unsplash_set:  !!env.UNSPLASH_ACCESS_KEY,
   });
 });
 
 app.post('/api/settings', (req, res) => {
-  const { anthropic_key, openai_key, google_key, unsplash_key } = req.body;
+  const { anthropic_key, openai_key, groq_key, google_key, unsplash_key } = req.body;
   const patch = {};
   if (anthropic_key) patch.ANTHROPIC_API_KEY  = anthropic_key;
   if (openai_key)    patch.OPENAI_API_KEY      = openai_key;
+  if (groq_key)      patch.GROQ_API_KEY         = groq_key;
   if (google_key)    patch.GOOGLE_API_KEY       = google_key;
   if (unsplash_key)  patch.UNSPLASH_ACCESS_KEY  = unsplash_key;
   saveEnv(patch);
@@ -105,17 +107,19 @@ app.post('/api/generate', async (req, res) => {
   const env = loadEnv();
   const ANTHROPIC_KEY  = env.ANTHROPIC_API_KEY;
   const OPENAI_KEY     = env.OPENAI_API_KEY;
+  const GROQ_KEY       = env.GROQ_API_KEY;
   const GOOGLE_KEY     = env.GOOGLE_API_KEY;
   const UNSPLASH_KEY   = env.UNSPLASH_ACCESS_KEY;
 
-  if (!ANTHROPIC_KEY && !OPENAI_KEY && !GOOGLE_KEY) {
-    job.log.push('Error: No LLM key set. Add Anthropic, OpenAI, or Google key in Settings.');
+  if (!ANTHROPIC_KEY && !OPENAI_KEY && !GROQ_KEY && !GOOGLE_KEY) {
+    job.log.push('Error: No LLM key set. Add a key in Settings.');
     job.running = false; job.done = true; job.error = 'No API key';
     return;
   }
-  if (ANTHROPIC_KEY) job.log.push('Using Anthropic');
-  else if (OPENAI_KEY) job.log.push('Using OpenAI');
-  else job.log.push('Using Google Gemini');
+  if (ANTHROPIC_KEY)    job.log.push('Using Anthropic');
+  else if (OPENAI_KEY)  job.log.push('Using OpenAI');
+  else if (GROQ_KEY)    job.log.push('Using Groq (Llama 3)');
+  else                  job.log.push('Using Google Gemini');
 
   // Lazy import generators (they need the key at runtime)
   try {
@@ -126,6 +130,7 @@ app.post('/api/generate', async (req, res) => {
       count: parseInt(count) || 3,
       anthropicKey: ANTHROPIC_KEY || null,
       openaiKey:    OPENAI_KEY    || null,
+      groqKey:      GROQ_KEY      || null,
       googleKey:    GOOGLE_KEY    || null,
       unsplashKey:  UNSPLASH_KEY  || null,
       cardsFile:    CARDS_FILE,
