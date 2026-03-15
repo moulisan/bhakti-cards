@@ -87,6 +87,16 @@ async function searchUnsplash(query, count, key) {
   } catch { return []; }
 }
 
+async function searchPexels(query, count, key) {
+  if (!key) return [];
+  try {
+    const url = `https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&per_page=${count}&orientation=portrait`;
+    const res  = await fetch(url, { headers: { Authorization: key } });
+    const data = await res.json();
+    return (data.photos || []).map(p => ({ url: p.src.large, author: p.photographer, source: 'pexels.com', link: p.url }));
+  } catch { return []; }
+}
+
 async function searchWikimedia(query, count) {
   try {
     const searchUrl = `https://commons.wikimedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&srnamespace=6&srlimit=${count*5}&format=json&origin=*`;
@@ -110,7 +120,7 @@ async function searchWikimedia(query, count) {
   } catch { return []; }
 }
 
-export async function runGenerate({ type, god, count, anthropicKey, openaiKey, googleKey, groqKey, unsplashKey, cardsFile, log }) {
+export async function runGenerate({ type, god, count, anthropicKey, openaiKey, googleKey, groqKey, unsplashKey, pexelsKey, cardsFile, log }) {
   const call = makeLLM({ anthropicKey, openaiKey, googleKey, groqKey });
   const cards     = fs.existsSync(cardsFile) ? JSON.parse(fs.readFileSync(cardsFile)) : [];
   const newCards  = [];
@@ -131,6 +141,7 @@ Rules: short well-known salutations, variety, correct script, accurate Roman tra
 Return ONLY a JSON array: [{"script":"...","roman":"..."},...]`);
 
         const allImgs = [
+          ...(await searchPexels(deity.searchQuery, count * 2, pexelsKey)),
           ...(await searchUnsplash(deity.searchQuery, count * 2, unsplashKey)),
           ...(await searchWikimedia(deity.searchQuery, count)),
         ];

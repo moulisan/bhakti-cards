@@ -90,17 +90,19 @@ app.get('/api/settings', (req, res) => {
     groq_set:      !!env.GROQ_API_KEY,
     google_set:    !!env.GOOGLE_API_KEY,
     unsplash_set:  !!env.UNSPLASH_ACCESS_KEY,
+    pexels_set:    !!env.PEXELS_API_KEY,
   });
 });
 
 app.post('/api/settings', (req, res) => {
-  const { anthropic_key, openai_key, groq_key, google_key, unsplash_key } = req.body;
+  const { anthropic_key, openai_key, groq_key, google_key, unsplash_key, pexels_key } = req.body;
   const patch = {};
   if (anthropic_key) patch.ANTHROPIC_API_KEY  = anthropic_key;
   if (openai_key)    patch.OPENAI_API_KEY      = openai_key;
   if (groq_key)      patch.GROQ_API_KEY         = groq_key;
   if (google_key)    patch.GOOGLE_API_KEY       = google_key;
   if (unsplash_key)  patch.UNSPLASH_ACCESS_KEY  = unsplash_key;
+  if (pexels_key)    patch.PEXELS_API_KEY        = pexels_key;
   saveEnv(patch);
   res.json({ ok: true });
 });
@@ -119,6 +121,7 @@ app.post('/api/generate', async (req, res) => {
   const GROQ_KEY       = env.GROQ_API_KEY;
   const GOOGLE_KEY     = env.GOOGLE_API_KEY;
   const UNSPLASH_KEY   = env.UNSPLASH_ACCESS_KEY;
+  const PEXELS_KEY     = env.PEXELS_API_KEY;
 
   if (!ANTHROPIC_KEY && !OPENAI_KEY && !GROQ_KEY && !GOOGLE_KEY) {
     job.log.push('Error: No LLM key set. Add a key in Settings.');
@@ -142,6 +145,7 @@ app.post('/api/generate', async (req, res) => {
       groqKey:      GROQ_KEY      || null,
       googleKey:    GOOGLE_KEY    || null,
       unsplashKey:  UNSPLASH_KEY  || null,
+      pexelsKey:    PEXELS_KEY    || null,
       cardsFile:    CARDS_FILE,
       log: msg => job.log.push(msg),
     });

@@ -267,7 +267,11 @@
       <input type="password" id="key-google" placeholder="AIza...">
     </div>
     <div>
-      <label><span class="key-dot" id="dot-unsplash"></span>Unsplash Access Key <span style="color:var(--muted)">(optional — enables image search)</span></label>
+      <label><span class="key-dot" id="dot-pexels"></span>Pexels API Key <span style="color:var(--muted)">(recommended — better deity images, free at pexels.com/api)</span></label>
+      <input type="password" id="key-pexels" placeholder="your pexels api key">
+    </div>
+    <div>
+      <label><span class="key-dot" id="dot-unsplash"></span>Unsplash Access Key <span style="color:var(--muted)">(optional)</span></label>
       <input type="password" id="key-unsplash" placeholder="your unsplash access key">
     </div>
     <div class="modal-footer">
@@ -473,10 +477,12 @@ async function openSettings() {
   document.getElementById('dot-anthropic').className = `key-dot ${s.anthropic_set?'set':'unset'}`;
   document.getElementById('dot-openai').className    = `key-dot ${s.openai_set?'set':'unset'}`;
   document.getElementById('dot-google').className    = `key-dot ${s.google_set?'set':'unset'}`;
+  document.getElementById('dot-pexels').className   = `key-dot ${s.pexels_set?'set':'unset'}`;
   document.getElementById('dot-unsplash').className  = `key-dot ${s.unsplash_set?'set':'unset'}`;
   document.getElementById('key-anthropic').value = '';
   document.getElementById('key-openai').value    = '';
   document.getElementById('key-google').value    = '';
+  document.getElementById('key-pexels').value    = '';
   document.getElementById('key-unsplash').value  = '';
   document.getElementById('settings-modal').classList.add('open');
 }
@@ -485,9 +491,10 @@ async function saveSettings() {
   const a = document.getElementById('key-anthropic').value.trim();
   const o = document.getElementById('key-openai').value.trim();
   const g = document.getElementById('key-google').value.trim();
+  const p = document.getElementById('key-pexels').value.trim();
   const u = document.getElementById('key-unsplash').value.trim();
-  if (!a && !o && !g && !u) { closeSettings(); return; }
-  await fetch('/api/settings', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({anthropic_key:a,openai_key:o,google_key:g,unsplash_key:u})});
+  if (!a && !o && !g && !p && !u) { closeSettings(); return; }
+  await fetch('/api/settings', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({anthropic_key:a,openai_key:o,google_key:g,pexels_key:p,unsplash_key:u})});
   closeSettings();
   showToast('Keys saved', 'success');
 }
