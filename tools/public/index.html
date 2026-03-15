@@ -203,7 +203,7 @@
   </div>
   <div class="topbar-actions">
     <button class="btn-topbar btn-gen"    onclick="openGenerate()">+ Generate</button>
-    <button class="btn-topbar btn-clear"  onclick="clearQueue()">Clear pending</button>
+    <button class="btn-topbar btn-clear"  onclick="clearQueue()">Clear pending/rejected</button>
     <button class="btn-topbar btn-update" onclick="updateApp()">Update Bhakti Cards</button>
     <button class="btn-topbar btn-settings" onclick="openSettings()" title="API keys">⚙</button>
   </div>
@@ -277,6 +277,18 @@
     <div class="modal-footer">
       <button class="btn-modal-cancel" onclick="closeSettings()">Cancel</button>
       <button class="btn-modal-ok" onclick="saveSettings()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Clear confirm modal ── -->
+<div class="modal-overlay" id="clear-modal">
+  <div class="modal" style="max-width:360px">
+    <h3>Clear cards</h3>
+    <p style="font-size:13px;color:var(--muted);line-height:1.6">This will remove all <strong style="color:var(--text)">pending</strong> and <strong style="color:var(--text)">rejected</strong> cards.<br>Approved cards will not be touched.</p>
+    <div class="modal-footer">
+      <button class="btn-modal-cancel" onclick="cancelClear()">Cancel</button>
+      <button class="btn-modal-ok" style="background:var(--red)" onclick="confirmClear()">Clear</button>
     </div>
   </div>
 </div>
@@ -448,11 +460,18 @@ async function startGenerate() {
 }
 
 // ── Clear queue ───────────────────────────────────────────────────────────────
-async function clearQueue() {
-  if (!confirm('Clear all pending cards? Approved and rejected cards will be kept.')) return;
-  await fetch('/api/cards?status=pending', { method: 'DELETE' });
+function clearQueue() {
+  document.getElementById('clear-modal').classList.add('open');
+}
+async function confirmClear() {
+  document.getElementById('clear-modal').classList.remove('open');
+  const res  = await fetch('/api/cards?status=pending,rejected', { method: 'DELETE' });
+  const data = await res.json();
   await loadCards();
-  showToast('Pending cards cleared', 'success');
+  showToast(`Cleared ${data.cleared} card${data.cleared !== 1 ? 's' : ''} — ${data.remaining} approved kept`, 'success');
+}
+function cancelClear() {
+  document.getElementById('clear-modal').classList.remove('open');
 }
 
 // ── Update Bhakti Cards ───────────────────────────────────────────────────────

@@ -122,6 +122,11 @@ async function searchWikimedia(query, count) {
 
 export async function runGenerate({ type, god, count, anthropicKey, openaiKey, googleKey, groqKey, unsplashKey, pexelsKey, cardsFile, log }) {
   const call = makeLLM({ anthropicKey, openaiKey, googleKey, groqKey });
+  // Track all image URLs already in the store to avoid duplicates
+  const existingUrls = new Set(
+    (fs.existsSync(cardsFile) ? JSON.parse(fs.readFileSync(cardsFile)) : [])
+      .map(c => c.image).filter(Boolean)
+  );
   const cards     = fs.existsSync(cardsFile) ? JSON.parse(fs.readFileSync(cardsFile)) : [];
   const newCards  = [];
 
@@ -145,9 +150,12 @@ Return ONLY a JSON array: [{"script":"...","roman":"..."},...]`);
           ...(await searchUnsplash(deity.searchQuery, count * 2, unsplashKey)),
           ...(await searchWikimedia(deity.searchQuery, count)),
         ];
-        // Deduplicate by URL
+        // Deduplicate and exclude already-used URLs
         const seen = new Set();
-        const images = allImgs.filter(i => { if (seen.has(i.url)) return false; seen.add(i.url); return true; }).slice(0, count);
+        const images = allImgs.filter(i => {
+          if (seen.has(i.url) || existingUrls.has(i.url)) return false;
+          seen.add(i.url); return true;
+        }).slice(0, count);
 
         salutations.forEach((sal, i) => {
           const img = images[i] || null;

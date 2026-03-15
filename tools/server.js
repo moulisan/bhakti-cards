@@ -65,12 +65,12 @@ app.post('/api/cards/:id/reject', (req, res) => {
 });
 
 app.delete('/api/cards', (req, res) => {
-  const { status } = req.query;
-  let cards = load();
-  if (status) cards = cards.filter(c => c.status !== status);
-  else cards = [];
-  save(cards);
-  res.json({ ok: true, remaining: cards.length });
+  const statuses = (req.query.status || '').split(',').filter(Boolean);
+  const cards    = loadCards();
+  const kept     = statuses.length ? cards.filter(c => !statuses.includes(c.status)) : [];
+  const cleared  = cards.length - kept.length;
+  saveCards(kept);
+  res.json({ ok: true, cleared, remaining: kept.length });
 });
 
 app.post('/api/cards/:id/update', (req, res) => {
