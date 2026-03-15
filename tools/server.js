@@ -67,7 +67,7 @@ app.post('/api/cards/:id/reject', (req, res) => {
 app.post('/api/cards/:id/update', (req, res) => {
   const cards = loadCards(), card = cards.find(c => c.id === req.params.id);
   if (!card) return res.status(404).json({ error: 'Not found' });
-  ['image','imgPos','script','roman','reference','imageSource','imageAuthor','imageLink']
+  ['image','imgPos','script','roman','reference','imageSource','imageAuthor','imageLink','gradient','glow']
     .forEach(k => { if (req.body[k] !== undefined) card[k] = req.body[k]; });
   saveCards(cards); res.json(card);
 });

@@ -103,18 +103,27 @@
     .btn-rv:hover  { background:rgba(192,57,43,0.22); }
     .btn-rv.active { background:var(--red); color:#fff; border-color:var(--red); }
 
-    .img-edit { display:flex; gap:4px; }
-    .img-edit input {
+    .img-edit, .text-edit-row { display:flex; gap:4px; }
+    .img-edit input, .text-edit-row input {
       flex:1; padding:4px 7px; border-radius:5px;
       background:var(--surface); border:1px solid var(--border);
       color:var(--text); font-size:10px; outline:none;
     }
-    .img-edit input:focus { border-color:var(--gold); }
-    .img-edit button {
+    .img-edit input:focus, .text-edit-row input:focus { border-color:var(--gold); }
+    .img-edit button, .text-edit-row button {
       padding:4px 8px; border-radius:5px; border:1px solid var(--border);
       background:var(--surface); color:var(--muted); font-size:10px; cursor:pointer;
+      white-space:nowrap;
     }
-    .img-edit button:hover { color:var(--gold); }
+    .img-edit button:hover, .text-edit-row button:hover { color:var(--gold); }
+    .text-edit-toggle {
+      font-size:10px; color:var(--muted); cursor:pointer; text-align:center;
+      padding:2px 0; user-select:none;
+    }
+    .text-edit-toggle:hover { color:var(--gold); }
+    .text-edit-fields { display:none; flex-direction:column; gap:4px; }
+    .text-edit-fields.open { display:flex; }
+    .text-edit-label { font-size:9px; color:var(--muted); margin-bottom:1px; }
 
     /* ── Empty ── */
     .empty { grid-column:1/-1; text-align:center; padding:80px 20px; color:var(--muted); font-size:13px; line-height:2; }
@@ -299,6 +308,11 @@ function renderGrid() {
       const v = document.querySelector(`#wrap-${CSS.escape(card.id)} .img-url-input`)?.value.trim();
       if (v) updateImage(card.id, v);
     });
+    document.querySelector(`#wrap-${CSS.escape(card.id)} .text-save-btn`)?.addEventListener('click', () => {
+      const s = document.querySelector(`#wrap-${CSS.escape(card.id)} .script-input`)?.value.trim();
+      const r = document.querySelector(`#wrap-${CSS.escape(card.id)} .roman-input`)?.value.trim();
+      updateText(card.id, s, r);
+    });
   });
 }
 
@@ -314,6 +328,16 @@ function buildCardHTML(card) {
   const credHTML = isDeity && card.imageSource ? `<div class="c-credit">${card.imageSource}</div>` : '';
   const imgEdit  = isDeity ? `<div class="img-edit"><input class="img-url-input" type="text" placeholder="Image URL…" value="${card.image||''}"><button class="img-save-btn">Set</button></div>` : '';
   const fontStyle = `font-family:'${card.font||'Noto Sans Devanagari'}',sans-serif`;
+  const scriptEsc = (card.script||'').replace(/"/g,'&quot;');
+  const romanEsc  = (card.roman||'').replace(/"/g,'&quot;');
+  const textEdit = `
+    <div class="text-edit-toggle" onclick="toggleTextEdit('${card.id}')">✎ edit text</div>
+    <div class="text-edit-fields" id="textedit-${card.id}">
+      <div class="text-edit-label">Script (original)</div>
+      <div class="text-edit-row"><input class="script-input" type="text" value="${scriptEsc}" placeholder="Script…"><button class="text-save-btn">Save</button></div>
+      <div class="text-edit-label">Roman (transliteration)</div>
+      <div class="text-edit-row"><input class="roman-input" type="text" value="${romanEsc}" placeholder="Roman…"></div>
+    </div>`;
   return `<div class="card-wrap" id="wrap-${card.id}">
   <div class="card-preview ${card.status}" style="background:${bg}">
     <div class="c-bg" style="background:${bg}"></div>
@@ -334,6 +358,7 @@ function buildCardHTML(card) {
     <button class="btn-rv ${card.status==='rejected'?'active':''}">Reject</button>
   </div>
   ${imgEdit}
+  ${textEdit}
 </div>`;
 }
 
@@ -348,6 +373,21 @@ async function updateImage(id, url) {
   const updated = await res.json();
   const idx = allCards.findIndex(c=>c.id===id); if (idx!==-1) allCards[idx]=updated;
   renderGrid();
+}
+
+async function updateText(id, script, roman) {
+  const body = {};
+  if (script) body.script = script;
+  if (roman)  body.roman  = roman;
+  const res = await fetch(`/api/cards/${id}/update`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const updated = await res.json();
+  const idx = allCards.findIndex(c=>c.id===id); if (idx!==-1) allCards[idx]=updated;
+  renderGrid();
+}
+
+function toggleTextEdit(id) {
+  const el = document.getElementById('textedit-' + id);
+  if (el) el.classList.toggle('open');
 }
 
 // ── Filters ──────────────────────────────────────────────────────────────────

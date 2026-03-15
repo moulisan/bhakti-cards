@@ -4,23 +4,23 @@ import { GoogleGenerativeAI }           from '@google/generative-ai';
 import fs from 'fs';
 
 export const DEITIES = [
-  { name: 'Ganesha',           searchQuery: 'Ganesha hindu god',          lang: 'Sanskrit',           font: 'Noto Sans Devanagari', gradient: ['#2C2C2A','#080807'], glow: 'rgba(130,120,100,0.22)' },
-  { name: 'Hanuman',           searchQuery: 'Hanuman hindu god',          lang: 'Sanskrit/Hindi',     font: 'Noto Sans Devanagari', gradient: ['#6E2800','#180700'], glow: 'rgba(180,80,20,0.30)'  },
-  { name: 'Shiva',             searchQuery: 'Shiva hindu god',            lang: 'Sanskrit',           font: 'Noto Sans Devanagari', gradient: ['#1A1850','#060418'], glow: 'rgba(80,70,200,0.35)'  },
-  { name: 'Lakshmi',           searchQuery: 'Lakshmi hindu goddess',      lang: 'Sanskrit',           font: 'Noto Sans Devanagari', gradient: ['#4A2800','#1A0800'], glow: 'rgba(220,150,20,0.30)' },
-  { name: 'Saraswati',         searchQuery: 'Saraswati hindu goddess',    lang: 'Sanskrit',           font: 'Noto Sans Devanagari', gradient: ['#0A2040','#020810'], glow: 'rgba(80,140,220,0.25)' },
-  { name: 'Durga',             searchQuery: 'Durga hindu goddess',        lang: 'Sanskrit',           font: 'Noto Sans Devanagari', gradient: ['#3A0A0A','#100202'], glow: 'rgba(200,60,20,0.30)'  },
-  { name: 'Krishna',           searchQuery: 'Krishna hindu god',          lang: 'Sanskrit',           font: 'Noto Sans Devanagari', gradient: ['#0A1A40','#020810'], glow: 'rgba(60,100,220,0.35)' },
-  { name: 'Murugan',           searchQuery: 'Murugan tamil god',          lang: 'Tamil',              font: 'Noto Sans Tamil',       gradient: ['#3A1A08','#0D0602'], glow: 'rgba(160,90,20,0.28)'  },
-  { name: 'Subrahmanya',       searchQuery: 'Subramanya kartikeya god',   lang: 'Sanskrit/Kannada',   font: 'Noto Sans Devanagari', gradient: ['#3A1A08','#0D0602'], glow: 'rgba(160,90,20,0.28)'  },
-  { name: 'Amman',             searchQuery: 'Amman tamil goddess',        lang: 'Tamil',              font: 'Noto Sans Tamil',       gradient: ['#3A0810','#100205'], glow: 'rgba(200,40,60,0.28)'  },
-  { name: 'Venkateswara',      searchQuery: 'Venkateswara tirupati god',  lang: 'Sanskrit/Telugu',    font: 'Noto Sans Devanagari', gradient: ['#1A1A08','#080802'], glow: 'rgba(200,180,40,0.28)' },
-  { name: 'Narasimha',         searchQuery: 'Narasimha hindu god',        lang: 'Sanskrit',           font: 'Noto Sans Devanagari', gradient: ['#3A1A00','#100500'], glow: 'rgba(220,140,20,0.30)' },
-  { name: 'Ayyappa',           searchQuery: 'Ayyappa sabarimala god',     lang: 'Sanskrit/Malayalam', font: 'Noto Sans Devanagari', gradient: ['#0A2010','#020802'], glow: 'rgba(40,160,60,0.25)'  },
-  { name: 'Vitthal',           searchQuery: 'Vitthal pandharpur god',     lang: 'Sanskrit/Marathi',   font: 'Noto Sans Devanagari', gradient: ['#0A1A30','#020608'], glow: 'rgba(60,100,180,0.28)' },
-  { name: 'Kali',              searchQuery: 'Kali hindu goddess',         lang: 'Sanskrit/Bengali',   font: 'Noto Sans Devanagari', gradient: ['#0A0A1A','#020205'], glow: 'rgba(100,20,180,0.30)' },
-  { name: 'Jagannath',         searchQuery: 'Jagannath puri god',         lang: 'Sanskrit/Odia',      font: 'Noto Sans Devanagari', gradient: ['#1A0A00','#060200'], glow: 'rgba(180,100,20,0.28)' },
-  { name: 'Raghavendra Swami', searchQuery: 'Raghavendra swami saint',    lang: 'Sanskrit/Kannada',   font: 'Noto Sans Devanagari', gradient: ['#0A1808','#020602'], glow: 'rgba(60,140,40,0.25)'  },
+  { name: 'Ganesha',           searchQuery: 'Ganesha lord devotional portrait',              lang: 'Sanskrit',           font: 'Noto Sans Devanagari', gradient: ['#2C2C2A','#080807'], glow: 'rgba(130,120,100,0.22)' },
+  { name: 'Hanuman',           searchQuery: 'Hanuman lord devotional portrait',              lang: 'Sanskrit/Hindi',     font: 'Noto Sans Devanagari', gradient: ['#6E2800','#180700'], glow: 'rgba(180,80,20,0.30)'  },
+  { name: 'Shiva',             searchQuery: 'Mahadev Shiva lord meditation portrait',        lang: 'Sanskrit',           font: 'Noto Sans Devanagari', gradient: ['#1A1850','#060418'], glow: 'rgba(80,70,200,0.35)'  },
+  { name: 'Lakshmi',           searchQuery: 'Goddess Lakshmi devotional portrait',           lang: 'Sanskrit',           font: 'Noto Sans Devanagari', gradient: ['#4A2800','#1A0800'], glow: 'rgba(220,150,20,0.30)' },
+  { name: 'Saraswati',         searchQuery: 'Goddess Saraswati devotional portrait',         lang: 'Sanskrit',           font: 'Noto Sans Devanagari', gradient: ['#0A2040','#020810'], glow: 'rgba(80,140,220,0.25)' },
+  { name: 'Durga',             searchQuery: 'Goddess Durga Maa devotional portrait',         lang: 'Sanskrit',           font: 'Noto Sans Devanagari', gradient: ['#3A0A0A','#100202'], glow: 'rgba(200,60,20,0.30)'  },
+  { name: 'Krishna',           searchQuery: 'Lord Krishna devotional portrait flute',        lang: 'Sanskrit',           font: 'Noto Sans Devanagari', gradient: ['#0A1A40','#020810'], glow: 'rgba(60,100,220,0.35)' },
+  { name: 'Murugan',           searchQuery: 'Lord Murugan Kartikeya devotional portrait',    lang: 'Tamil',              font: 'Noto Sans Tamil',       gradient: ['#3A1A08','#0D0602'], glow: 'rgba(160,90,20,0.28)'  },
+  { name: 'Subrahmanya',       searchQuery: 'Lord Subramanya Kartikeya devotional portrait', lang: 'Sanskrit/Kannada',   font: 'Noto Sans Devanagari', gradient: ['#3A1A08','#0D0602'], glow: 'rgba(160,90,20,0.28)'  },
+  { name: 'Amman',             searchQuery: 'Goddess Amman Shakti devotional portrait',      lang: 'Tamil',              font: 'Noto Sans Tamil',       gradient: ['#3A0810','#100205'], glow: 'rgba(200,40,60,0.28)'  },
+  { name: 'Venkateswara',      searchQuery: 'Lord Venkateswara Balaji Tirupati portrait',    lang: 'Sanskrit/Telugu',    font: 'Noto Sans Devanagari', gradient: ['#1A1A08','#080802'], glow: 'rgba(200,180,40,0.28)' },
+  { name: 'Narasimha',         searchQuery: 'Lord Narasimha Vishnu devotional portrait',     lang: 'Sanskrit',           font: 'Noto Sans Devanagari', gradient: ['#3A1A00','#100500'], glow: 'rgba(220,140,20,0.30)' },
+  { name: 'Ayyappa',           searchQuery: 'Lord Ayyappa Sabarimala devotional portrait',   lang: 'Sanskrit/Malayalam', font: 'Noto Sans Devanagari', gradient: ['#0A2010','#020802'], glow: 'rgba(40,160,60,0.25)'  },
+  { name: 'Vitthal',           searchQuery: 'Lord Vitthal Pandarpur devotional portrait',    lang: 'Sanskrit/Marathi',   font: 'Noto Sans Devanagari', gradient: ['#0A1A30','#020608'], glow: 'rgba(60,100,180,0.28)' },
+  { name: 'Kali',              searchQuery: 'Goddess Kali Maa devotional portrait',          lang: 'Sanskrit/Bengali',   font: 'Noto Sans Devanagari', gradient: ['#0A0A1A','#020205'], glow: 'rgba(100,20,180,0.30)' },
+  { name: 'Jagannath',         searchQuery: 'Lord Jagannath Puri devotional portrait',       lang: 'Sanskrit/Odia',      font: 'Noto Sans Devanagari', gradient: ['#1A0A00','#060200'], glow: 'rgba(180,100,20,0.28)' },
+  { name: 'Raghavendra Swami', searchQuery: 'Raghavendra Swami saint portrait devotional',   lang: 'Sanskrit/Kannada',   font: 'Noto Sans Devanagari', gradient: ['#0A1808','#020602'], glow: 'rgba(60,140,40,0.25)'  },
 ];
 
 function makeId(prefix) {
@@ -130,10 +130,13 @@ Language: ${deity.lang}. Use native script (Devanagari for Sanskrit/Hindi, Tamil
 Rules: short well-known salutations, variety, correct script, accurate Roman transliteration.
 Return ONLY a JSON array: [{"script":"...","roman":"..."},...]`);
 
-        const images = [
-          ...(await searchUnsplash(deity.searchQuery, count, unsplashKey)),
+        const allImgs = [
+          ...(await searchUnsplash(deity.searchQuery, count * 2, unsplashKey)),
           ...(await searchWikimedia(deity.searchQuery, count)),
-        ].slice(0, count);
+        ];
+        // Deduplicate by URL
+        const seen = new Set();
+        const images = allImgs.filter(i => { if (seen.has(i.url)) return false; seen.add(i.url); return true; }).slice(0, count);
 
         salutations.forEach((sal, i) => {
           const img = images[i] || null;
