@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
+import OpenAI    from 'openai';
 import fs from 'fs';
 
 export const DEITIES = [
@@ -25,13 +26,32 @@ function makeId(prefix) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2,6)}`;
 }
 
-async function llm(anthropic, prompt) {
-  const msg = await anthropic.messages.create({
-    model: 'claude-opus-4-6',
-    max_tokens: 2048,
-    messages: [{ role: 'user', content: prompt }],
-  });
-  const text = msg.content[0].text.trim();
+function makeLLM({ anthropicKey, openaiKey }) {
+  if (anthropicKey) {
+    const client = new Anthropic({ apiKey: anthropicKey });
+    return async (prompt) => {
+      const msg = await client.messages.create({
+        model: 'claude-opus-4-6', max_tokens: 2048,
+        messages: [{ role: 'user', content: prompt }],
+      });
+      return msg.content[0].text.trim();
+    };
+  }
+  if (openaiKey) {
+    const client = new OpenAI({ apiKey: openaiKey });
+    return async (prompt) => {
+      const res = await client.chat.completions.create({
+        model: 'gpt-4o', max_tokens: 2048,
+        messages: [{ role: 'user', content: prompt }],
+      });
+      return res.choices[0].message.content.trim();
+    };
+  }
+  throw new Error('No LLM API key set. Add one in Settings.');
+}
+
+async function llm(call, prompt) {
+  const text = await call(prompt);
   const m = text.match(/\[[\s\S]*\]/);
   if (!m) throw new Error('No JSON array in LLM response');
   return JSON.parse(m[0]);
@@ -70,8 +90,8 @@ async function searchWikimedia(query, count) {
   } catch { return []; }
 }
 
-export async function runGenerate({ type, god, count, anthropicKey, unsplashKey, cardsFile, log }) {
-  const anthropic = new Anthropic({ apiKey: anthropicKey });
+export async function runGenerate({ type, god, count, anthropicKey, openaiKey, unsplashKey, cardsFile, log }) {
+  const call = makeLLM({ anthropicKey, openaiKey });
   const cards     = fs.existsSync(cardsFile) ? JSON.parse(fs.readFileSync(cardsFile)) : [];
   const newCards  = [];
 
@@ -85,7 +105,7 @@ export async function runGenerate({ type, god, count, anthropicKey, unsplashKey,
 
     for (const deity of deities) {
       try {
-        const salutations = await llm(anthropic, `For the Hindu deity "${deity.name}", provide ${count} distinct salutations or short mantras.
+        const salutations = await llm(call, `For the Hindu deity "${deity.name}", provide ${count} distinct salutations or short mantras.
 Language: ${deity.lang}. Use native script (Devanagari for Sanskrit/Hindi, Tamil for Tamil).
 Rules: short well-known salutations, variety, correct script, accurate Roman transliteration.
 Return ONLY a JSON array: [{"script":"...","roman":"..."},...]`);
@@ -119,7 +139,7 @@ Return ONLY a JSON array: [{"script":"...","roman":"..."},...]`);
   if (type === 'gita' || type === 'all') {
     log(`Generating ${count} Bhagavad Gita verses...`);
     try {
-      const verses = await llm(anthropic, `Find ${count} uplifting verses from the Bhagavad Gita.
+      const verses = await llm(call, `Find ${count} uplifting verses from the Bhagavad Gita.
 Rules: uplifting only (duty, equanimity, devotion, self-knowledge, action without attachment, courage). NO death/war/dark themes. Variety of chapters. Full Sanskrit Devanagari + Roman transliteration + exact chapter/verse.
 Return ONLY JSON: [{"script":"...","roman":"...","reference":"Chapter X, Verse Y"},...]`);
       verses.forEach(v => newCards.push({
@@ -136,7 +156,7 @@ Return ONLY JSON: [{"script":"...","roman":"...","reference":"Chapter X, Verse Y
   if (type === 'upanishad' || type === 'all') {
     log(`Generating ${count} Upanishad verses...`);
     try {
-      const verses = await llm(anthropic, `Find ${count} uplifting verses/mahavakyas from the Upanishads.
+      const verses = await llm(call, `Find ${count} uplifting verses/mahavakyas from the Upanishads.
 Rules: uplifting only (self-knowledge, unity, consciousness, peace, divine within). NO dark themes. Variety: Kena, Katha, Isha, Mandukya, Chandogya, Brihadaranyaka, Mundaka, Taittiriya. Full Sanskrit Devanagari + Roman transliteration + source.
 Return ONLY JSON: [{"script":"...","roman":"...","reference":"Upanishad Name, X.Y"},...]`);
       verses.forEach(v => newCards.push({
