@@ -611,10 +611,10 @@
   // ── WhatsApp share ───────────────────────────────────────────
   btnShare.addEventListener('click', () => {
     const card = currentCard();
-    const text =
-      `A moment of devotion, anytime. ✨\n` +
-      `https://bhakthicards.online`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+    const lines = [card.script, card.roman];
+    if (card.reference) lines.push(card.reference);
+    lines.push('', 'A moment of devotion, anytime. ✨', 'https://bhakthicards.online');
+    window.open(`https://wa.me/?text=${encodeURIComponent(lines.join('\n'))}`, '_blank');
   });
 
   // ── Swipe ────────────────────────────────────────────────────
