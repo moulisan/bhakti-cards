@@ -22,7 +22,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,300;1,400&family=Noto+Sans+Devanagari:wght@300;400&family=Noto+Sans+Tamil:wght@300;400&display=swap" rel="stylesheet">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
   <style>
     *, *::before, *::after {
@@ -461,9 +461,10 @@
     return [...favList, ...nonFavList];
   }
 
-  let order = buildOrder();
-  let pos   = 0;
-  let busy  = false;
+  let order      = buildOrder();
+  let pos        = 0;
+  let busy       = false;
+  let cardBlob   = null;  // pre-captured card image for sharing
 
   function currentCard() { return CARDS.find(c => c.id === order[pos]); }
 
@@ -545,6 +546,19 @@
 
     updateHeart();
     renderDots();
+
+    // Pre-capture card image so share tap works instantly (no async before navigator.share)
+    cardBlob = null;
+    if (typeof html2canvas !== 'undefined') {
+      setTimeout(async () => {
+        try {
+          const canvas = await html2canvas(cardEl, {
+            useCORS: true, scale: 2, logging: false, backgroundColor: null,
+          });
+          cardBlob = await new Promise(r => canvas.toBlob(r, 'image/png'));
+        } catch (e) { cardBlob = null; }
+      }, 300);
+    }
   }
 
   function updateHeart() {
@@ -609,28 +623,21 @@
     renderDots();
   });
 
-  // ── WhatsApp share ───────────────────────────────────────────
-  btnShare.addEventListener('click', async () => {
+  // ── Share ────────────────────────────────────────────────────
+  btnShare.addEventListener('click', () => {
     const card = currentCard();
     const lines = [card.script, card.roman];
     if (card.reference) lines.push(card.reference);
     lines.push('', 'A moment of devotion, anytime. ✨', 'https://bhakthicards.online');
     const shareText = lines.join('\n');
 
-    // Try to capture card as image and share via Web Share API
-    if (typeof html2canvas !== 'undefined' && navigator.canShare) {
-      try {
-        const canvas = await html2canvas(cardEl, {
-          useCORS: true, scale: 2, logging: false,
-          backgroundColor: null,
-        });
-        const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
-        const file = new File([blob], 'bhakti-card.png', { type: 'image/png' });
-        if (navigator.canShare({ files: [file] })) {
-          await navigator.share({ files: [file], text: shareText });
-          return;
-        }
-      } catch (e) { /* fall through */ }
+    // Use pre-captured blob — no async needed, gesture context preserved
+    if (cardBlob && navigator.canShare) {
+      const file = new File([cardBlob], 'bhakti-card.png', { type: 'image/png' });
+      if (navigator.canShare({ files: [file] })) {
+        navigator.share({ files: [file], text: shareText }).catch(() => {});
+        return;
+      }
     }
 
     // Fallback: text + URL via wa.me
