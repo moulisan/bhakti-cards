@@ -247,8 +247,12 @@
       <input type="password" id="key-anthropic" placeholder="sk-ant-...">
     </div>
     <div>
-      <label><span class="key-dot" id="dot-openai"></span>OpenAI API Key <span style="color:var(--muted)">(used if Anthropic key not set)</span></label>
+      <label><span class="key-dot" id="dot-openai"></span>OpenAI API Key</label>
       <input type="password" id="key-openai" placeholder="sk-...">
+    </div>
+    <div>
+      <label><span class="key-dot" id="dot-google"></span>Google AI Studio Key</label>
+      <input type="password" id="key-google" placeholder="AIza...">
     </div>
     <div>
       <label><span class="key-dot" id="dot-unsplash"></span>Unsplash Access Key <span style="color:var(--muted)">(optional — enables image search)</span></label>
@@ -417,9 +421,11 @@ async function openSettings() {
   const s = await fetch('/api/settings').then(r=>r.json());
   document.getElementById('dot-anthropic').className = `key-dot ${s.anthropic_set?'set':'unset'}`;
   document.getElementById('dot-openai').className    = `key-dot ${s.openai_set?'set':'unset'}`;
+  document.getElementById('dot-google').className    = `key-dot ${s.google_set?'set':'unset'}`;
   document.getElementById('dot-unsplash').className  = `key-dot ${s.unsplash_set?'set':'unset'}`;
   document.getElementById('key-anthropic').value = '';
   document.getElementById('key-openai').value    = '';
+  document.getElementById('key-google').value    = '';
   document.getElementById('key-unsplash').value  = '';
   document.getElementById('settings-modal').classList.add('open');
 }
@@ -427,9 +433,10 @@ function closeSettings() { document.getElementById('settings-modal').classList.r
 async function saveSettings() {
   const a = document.getElementById('key-anthropic').value.trim();
   const o = document.getElementById('key-openai').value.trim();
+  const g = document.getElementById('key-google').value.trim();
   const u = document.getElementById('key-unsplash').value.trim();
-  if (!a && !o && !u) { closeSettings(); return; }
-  await fetch('/api/settings', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({anthropic_key:a,openai_key:o,unsplash_key:u})});
+  if (!a && !o && !g && !u) { closeSettings(); return; }
+  await fetch('/api/settings', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({anthropic_key:a,openai_key:o,google_key:g,unsplash_key:u})});
   closeSettings();
   showToast('Keys saved', 'success');
 }

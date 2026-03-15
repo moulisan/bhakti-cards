@@ -1,5 +1,6 @@
-import Anthropic from '@anthropic-ai/sdk';
-import OpenAI    from 'openai';
+import Anthropic                        from '@anthropic-ai/sdk';
+import OpenAI                           from 'openai';
+import { GoogleGenerativeAI }           from '@google/generative-ai';
 import fs from 'fs';
 
 export const DEITIES = [
@@ -26,7 +27,7 @@ function makeId(prefix) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2,6)}`;
 }
 
-function makeLLM({ anthropicKey, openaiKey }) {
+function makeLLM({ anthropicKey, openaiKey, googleKey }) {
   if (anthropicKey) {
     const client = new Anthropic({ apiKey: anthropicKey });
     return async (prompt) => {
@@ -47,7 +48,15 @@ function makeLLM({ anthropicKey, openaiKey }) {
       return res.choices[0].message.content.trim();
     };
   }
-  throw new Error('No LLM API key set. Add one in Settings.');
+  if (googleKey) {
+    const client = new GoogleGenerativeAI(googleKey);
+    const model  = client.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    return async (prompt) => {
+      const res = await model.generateContent(prompt);
+      return res.response.text().trim();
+    };
+  }
+  throw new Error('No LLM API key set. Add Anthropic, OpenAI, or Google key in Settings.');
 }
 
 async function llm(call, prompt) {
@@ -90,8 +99,8 @@ async function searchWikimedia(query, count) {
   } catch { return []; }
 }
 
-export async function runGenerate({ type, god, count, anthropicKey, openaiKey, unsplashKey, cardsFile, log }) {
-  const call = makeLLM({ anthropicKey, openaiKey });
+export async function runGenerate({ type, god, count, anthropicKey, openaiKey, googleKey, unsplashKey, cardsFile, log }) {
+  const call = makeLLM({ anthropicKey, openaiKey, googleKey });
   const cards     = fs.existsSync(cardsFile) ? JSON.parse(fs.readFileSync(cardsFile)) : [];
   const newCards  = [];
 
