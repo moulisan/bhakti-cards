@@ -22,7 +22,6 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,300;1,400&family=Noto+Sans+Devanagari:wght@300;400&family=Noto+Sans+Tamil:wght@300;400&display=swap" rel="stylesheet">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
   <style>
     *, *::before, *::after {
@@ -547,18 +546,14 @@
     updateHeart();
     renderDots();
 
-    // Pre-capture card image so share tap works instantly (no async before navigator.share)
+    // Pre-capture card image so share tap works instantly
     cardBlob = null;
-    if (typeof html2canvas !== 'undefined') {
-      setTimeout(async () => {
-        try {
-          const canvas = await html2canvas(cardEl, {
-            useCORS: true, scale: 2, logging: false, backgroundColor: null,
-          });
-          cardBlob = await new Promise(r => canvas.toBlob(r, 'image/png'));
-        } catch (e) { cardBlob = null; }
-      }, 300);
-    }
+    setTimeout(async () => {
+      try {
+        await document.fonts.ready;
+        cardBlob = await captureCardToBlob();
+      } catch (e) { cardBlob = null; }
+    }, 100);
   }
 
   function updateHeart() {
@@ -623,13 +618,144 @@
     renderDots();
   });
 
+  // ── Canvas card renderer (for sharing) ──────────────────────
+  function _rrect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
+    ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
+  }
+  function _paintGradient(ctx, gradStr, W, H) {
+    const m = gradStr.match(/linear-gradient\((\d+)deg,([^)]+)\)/);
+    if (!m) { ctx.fillStyle='#111'; ctx.fillRect(0,0,W,H); return; }
+    const rad = parseFloat(m[1]) * Math.PI / 180;
+    const len = Math.abs(W*Math.sin(rad)) + Math.abs(H*Math.cos(rad));
+    const cx=W/2, cy=H/2;
+    const g = ctx.createLinearGradient(
+      cx-Math.sin(rad)*len/2, cy+Math.cos(rad)*len/2,
+      cx+Math.sin(rad)*len/2, cy-Math.cos(rad)*len/2
+    );
+    for (const [,col,pct] of m[2].matchAll(/(#[0-9a-fA-F]{3,8})\s+([\d.]+)%/g))
+      g.addColorStop(+pct/100, col);
+    ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  }
+  async function _paintImage(ctx, src, pos, W, H) {
+    const img = new Image(); img.crossOrigin='anonymous';
+    await new Promise(r => { img.onload=r; img.onerror=r; img.src=src; });
+    if (!img.naturalWidth) return;
+    const s = Math.max(W/img.naturalWidth, H/img.naturalHeight);
+    const iw=img.naturalWidth*s, ih=img.naturalHeight*s;
+    const p=(pos||'center 12%').split(/\s+/);
+    const px=p[0]==='center'?0.5:parseFloat(p[0])/100;
+    const py=!p[1]||p[1]==='center'?0.5:parseFloat(p[1])/100;
+    ctx.drawImage(img, (W-iw)*px, (H-ih)*py, iw, ih);
+  }
+  function _paintScrim(ctx, W, H) {
+    const g=ctx.createLinearGradient(0,0,0,H);
+    [[0,'rgba(0,0,0,0)'],[.22,'rgba(0,0,0,0)'],[.48,'rgba(0,0,0,0.22)'],[.72,'rgba(0,0,0,0.78)'],[1,'rgba(0,0,0,0.93)']].forEach(([p,c])=>g.addColorStop(p,c));
+    ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  }
+  function _paintDivider(ctx, W, y, padX) {
+    const g=ctx.createLinearGradient(padX,y,W-padX,y);
+    g.addColorStop(0,'rgba(201,168,76,0)'); g.addColorStop(.5,'rgba(201,168,76,0.55)'); g.addColorStop(1,'rgba(201,168,76,0)');
+    ctx.save(); ctx.strokeStyle=g; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(padX,y); ctx.lineTo(W-padX,y); ctx.stroke();
+    [[W/2-10,1.25,.4],[W/2,1.75,.8],[W/2+10,1.25,.4]].forEach(([x,r,a])=>{
+      ctx.fillStyle=`rgba(201,168,76,${a})`; ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
+    });
+    ctx.restore();
+  }
+  function _wrapText(ctx, text, maxW) {
+    const words=text.split(' '), lines=[];
+    let cur='';
+    for (const w of words) {
+      const t=cur?cur+' '+w:w;
+      if (ctx.measureText(t).width>maxW&&cur){lines.push(cur);cur=w;}else cur=t;
+    }
+    if(cur) lines.push(cur);
+    return lines;
+  }
+
+  async function captureCardToBlob() {
+    const card = currentCard();
+    const rect = cardEl.getBoundingClientRect();
+    const dpr=2, W=rect.width, H=rect.height;
+    const canvas=document.createElement('canvas');
+    canvas.width=Math.round(W*dpr); canvas.height=Math.round(H*dpr);
+    const ctx=canvas.getContext('2d');
+    ctx.scale(dpr,dpr);
+
+    _rrect(ctx,0,0,W,H,26); ctx.clip();
+    _paintGradient(ctx, card.gradient, W, H);
+
+    const isVerse = card.type==='gita'||card.type==='upanishad';
+    if (isVerse) {
+      // Om watermark
+      ctx.save(); ctx.globalAlpha=0.062; ctx.fillStyle='#fff';
+      ctx.font='300 180px "Noto Sans Devanagari",sans-serif';
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText('ॐ', W/2, H*0.42); ctx.restore();
+
+      // Verse text (vertically centered)
+      const padX=36, font=card.font||'Noto Sans Devanagari';
+      const scriptLines=card.script.split('\n'), romanLines=card.roman.split('\n');
+      ctx.font=`italic 400 19px "Cormorant Garamond",serif`;
+      const engLines=card.english?_wrapText(ctx,card.english,W-padX*2):[];
+      const refH=card.reference?16:0, divH=24;
+      const scriptLH=20*1.9, romanLH=15*1.75, engLH=19*1.65;
+      const total=refH+(refH?12:0)+divH+scriptLines.length*scriptLH+divH+romanLines.length*romanLH+(engLines.length?14+engLines.length*engLH:0);
+      let y=(H-total)/2;
+
+      ctx.textAlign='center'; ctx.textBaseline='top';
+      if (card.reference) {
+        ctx.fillStyle='rgba(201,168,76,0.90)';
+        ctx.font=`italic 400 12.5px "Cormorant Garamond",serif`;
+        ctx.fillText(card.reference.toUpperCase(), W/2, y); y+=refH+12;
+      }
+      _paintDivider(ctx,W,y+divH/2,padX); y+=divH;
+      ctx.fillStyle='rgba(255,255,255,0.97)';
+      ctx.font=`300 20px "${font}",sans-serif`;
+      ctx.shadowColor='rgba(0,0,0,0.7)'; ctx.shadowBlur=18;
+      scriptLines.forEach((l,i)=>ctx.fillText(l,W/2,y+i*scriptLH));
+      ctx.shadowBlur=0; y+=scriptLines.length*scriptLH;
+      _paintDivider(ctx,W,y+divH/2,padX); y+=divH;
+      ctx.fillStyle='rgba(255,255,255,0.68)';
+      ctx.font=`italic 300 15px "Cormorant Garamond",serif`;
+      romanLines.forEach((l,i)=>ctx.fillText(l,W/2,y+i*romanLH)); y+=romanLines.length*romanLH;
+      if (engLines.length) {
+        y+=14; ctx.fillStyle='rgba(255,255,255,0.82)';
+        ctx.font=`italic 400 19px "Cormorant Garamond",serif`;
+        engLines.forEach((l,i)=>ctx.fillText(i===0?'\u201C'+l:(i===engLines.length-1?l+'\u201D':l),W/2,y+i*engLH));
+      }
+    } else {
+      if (card.image) { await _paintImage(ctx,card.image,card.imgPos,W,H); _paintScrim(ctx,W,H); }
+      // Deity text from bottom
+      const padX=54, botPad=34, font=card.font||'Noto Sans Devanagari';
+      const scriptLines=card.script.split('\n'), romanLines=card.roman.split('\n');
+      const scriptLH=20*1.75, romanLH=17*1.6;
+      ctx.textAlign='center'; ctx.textBaseline='bottom';
+      let y=H-botPad;
+      ctx.fillStyle='rgba(255,255,255,0.62)';
+      ctx.font=`italic 300 17px "Cormorant Garamond",serif`;
+      for(let i=romanLines.length-1;i>=0;i--){ ctx.fillText(romanLines[i],W/2,y); y-=romanLH; }
+      y-=12;
+      ctx.fillStyle='rgba(255,255,255,0.97)';
+      ctx.font=`300 20px "${font}",sans-serif`;
+      ctx.shadowColor='rgba(0,0,0,0.55)'; ctx.shadowBlur=14;
+      for(let i=scriptLines.length-1;i>=0;i--){ ctx.fillText(scriptLines[i],W/2,y); y-=scriptLH; }
+      ctx.shadowBlur=0; y-=20;
+      _paintDivider(ctx,W,y,padX);
+    }
+
+    // Gold border
+    ctx.save(); _rrect(ctx,.5,.5,W-1,H-1,25.5);
+    ctx.strokeStyle='rgba(201,168,76,0.18)'; ctx.lineWidth=1; ctx.stroke(); ctx.restore();
+
+    return new Promise(r => canvas.toBlob(r,'image/png'));
+  }
+
   // ── Share ────────────────────────────────────────────────────
   btnShare.addEventListener('click', () => {
-    const card = currentCard();
-    const lines = [card.script, card.roman];
-    if (card.reference) lines.push(card.reference);
-    lines.push('', 'A moment of devotion, anytime. ✨', 'https://bhakthicards.online');
-    const shareText = lines.join('\n');
+    const shareText = 'A moment of devotion, anytime. ✨\nhttps://bhakthicards.online';
 
     // Use pre-captured blob — no async needed, gesture context preserved
     if (cardBlob && navigator.canShare) {
